@@ -150,7 +150,7 @@ namespace trainer {
         auto hypo = hypothesis(theta,x);
         gradientDescent(theta,ld,hypo,x,y,param.n);
         //std::cout<<theta.size()<<" "<<param.descriptionLines.size();
-
+        std::cout<<param.k<<' '<<param.n<<'\n';
         for(int i = 0; i < theta.size(); i++){
             std::cout << std::setprecision(17)<<param.descriptionLines[i].wspolrzedne[0]<<' '<<theta[theta.size()-1-i]<<"\n";
         }
@@ -182,18 +182,18 @@ int main(int argc, const char *argv[]) {
             continue;
         }
             //windows
-        else if (arg.compare("-d") == 0) {
-            descriptionFileName = std::string(argv[i + 1]);
-            continue;
-        }
+//        else if (arg.compare("-d") == 0) {
+//            descriptionFileName = std::string(argv[i + 1]);
+//            continue;
+//        }
     }
 
     auto trainSet = readTrainSet(trainsetFileName);
     auto input = trainer::readInput(inputFileName);
-    //windows
-    auto parameters = trainee::readDescription(descriptionFileName);
+//    //windows
+//    auto parameters = trainee::readDescription(descriptionFileName);
 //    linux
-//    auto description = readDescription();
+    auto parameters = readDescription();
 /*
     for ( auto t: trainSet.coordinates ) {
         std::cout << std::setprecision(16) << t.x << ' ' << t.y << '\n';
