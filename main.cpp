@@ -7,81 +7,64 @@
 
 #define assertm(exp, msg) assert(((void)msg, exp))
 
-struct DescriptionLine {
-    std::vector<int> wspolrzedne;
-    double wspolczynnik;
-};
 
-struct Description {
-    int k = 0;
-    int n = 0;
-    std::vector<DescriptionLine> descriptionLines;
-};
 
-struct InputLine {
-    std::vector<double> wsp;
-};
-
-struct Input {
-    std::vector<InputLine> inputLines;
+struct SetLine {
+    std::vector<double > approxPoints;
+    double expectedOut = 0.0;
 };
 
 struct Set {
-    std::vector<double > approxPoints;
-    double polyOut = 0;
+    std::vector<SetLine > set;
+    int n =0;
 };
-
+struct InLine {
+    std::vector<double> wsp;
+};
 struct In {
-    std::vector<double> trainedPoly;
+    std::vector<InLine> trainedPoly;
 };
 
 
 
 
 
-Description readDescription(std::string fileName) {
-    Description tempDesc;
-    bool first_red = false;
+Set readSet(std::string fileName) {
+    Set tempSet;
     std::ifstream input(fileName);
 
     for( std::string line; getline( input, line ); )
     {
         std::istringstream stream(line);
-        std::vector<std::string> results(std::istream_iterator<std::string>{stream},std::istream_iterator<std::string>());
+        std::vector<std::string> results(std::istream_iterator<std::string>{stream},
+                                         std::istream_iterator<std::string>());
 
-        if(!first_red) {
-            assertm(results.size() == 2, "FIRST DESC LINE HAS TO BE 2 NUMBERS!");
-            tempDesc.k = atoi(results[0].c_str());
-            tempDesc.n = atoi(results[1].c_str());
-            first_red = true;
-            continue;
-        }
-
-        assertm(results.size() == tempDesc.n + 1 , "DescLine error!");
-        DescriptionLine tempDescLine;
-
+        SetLine tempSetLine;
         for (auto i = 0; i<results.size()-1; i++) {
-            tempDescLine.wspolrzedne.push_back(atoi(results[i].c_str()));
+            tempSetLine.approxPoints.push_back(atof(results[i].c_str()));
+
         }
-        tempDescLine.wspolczynnik = atof(results[results.size()-1].c_str());
-        tempDesc.descriptionLines.push_back(tempDescLine);
+        tempSetLine.expectedOut = atof(results[results.size()-1].c_str());
+        tempSet.set.push_back(tempSetLine);
+
     }
-    return tempDesc;
+    return tempSet;
 }
 
-Input readInput() {
-    Input tempInput;
+In readInput() {
+    In tempIn;
     for( std::string line; getline( std::cin, line ); )
     {
         std::istringstream stream(line);
         std::vector<std::string> results(std::istream_iterator<std::string>{stream},std::istream_iterator<std::string>());
-        InputLine tempInputLine;
+        InLine tempInLine;
         for (auto s : results) {
-            tempInputLine.wsp.push_back(atof(s.c_str()));
+            tempInLine.wsp.push_back(atof(s.c_str()));
         }
-        tempInput.inputLines.push_back(tempInputLine);
+        tempIn.trainedPoly.push_back(tempInLine);
+
     }
-    return tempInput;
+    return tempIn;
 }
 
 void writeOutput(std::vector<double> results) {
@@ -92,37 +75,36 @@ void writeOutput(std::vector<double> results) {
 
 
 int main(int argc, const char * argv[]) {
-    assertm(argc == 3, "Unexpected args! error!");
-    std::string descriptionFileName;
+    //assertm(argc == 3, "Unexpected args! error!");
+    std::string setFileName;
 
     for (int i = 0 ; i < argc; i++) {
         auto arg = std::string(argv[i]);
-        if(arg.compare("-d") == 0) { descriptionFileName = std::string(argv[i+1]); continue; }
+        if(arg.compare("-t") == 0) { setFileName = std::string(argv[i+1]); continue; }
     }
+    std::cout<<setFileName<< '\n';
 
-    auto description = readDescription(descriptionFileName);
+    auto set = readSet(setFileName);
     auto input = readInput();
     auto result = std::vector<double>();
 
-    auto out = std::vector<double>();
-
-    for(int i = 0; i < input.inputLines.size();i++){
-
-        result.push_back(0.0);
-        result[i] = 0.0;
-        for(int j = 0; j < description.descriptionLines.size(); j++){
-            double poly = description.descriptionLines[j].wspolczynnik;
-            for(int l = 0; l < description.descriptionLines[j].wspolrzedne.size(); l++)
-            {
-                int iter = description.descriptionLines[j].wspolrzedne[l]-1;
-                if(iter > -1)
-                {
-                    poly *= input.inputLines[i].wsp[iter];
-                }
-            }
-            result[i] += poly;
+    std::cout << set.n << std::endl;
+    for (auto s : set.set){
+        for (auto i : s.approxPoints){
+            std::cout << i << ' ';
         }
+        std::cout << "expected"<< s.expectedOut << std::endl;
     }
-    writeOutput(result);
+    std::cout << "-----------------" << std::endl;
+    for (auto in : input.trainedPoly){
+        for (auto t : in.wsp){
+            std::cout << t << ' ';
+        }
+        std::cout <<"\n";
+    }
+
+
+
+    // writeOutput(result);
 
 }
