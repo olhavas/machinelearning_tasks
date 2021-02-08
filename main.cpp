@@ -4,8 +4,13 @@
 #include <sstream>
 #include <cassert>
 #include <iterator>
+#include <limits>
+
+
 
 #define assertm(exp, msg) assert(((void)msg, exp))
+
+typedef std::numeric_limits< double > dbl;
 
 struct DescriptionLine {
     std::vector<int> wspolrzedne;
@@ -26,15 +31,6 @@ struct Input {
     std::vector<InputLine> inputLines;
 };
 
-struct Set {
-    std::vector<double > approxPoints;
-    double polyOut = 0;
-};
-
-struct In {
-    std::vector<double> trainedPoly;
-};
-
 
 
 
@@ -51,13 +47,13 @@ Description readDescription(std::string fileName) {
 
         if(!first_red) {
             assertm(results.size() == 2, "FIRST DESC LINE HAS TO BE 2 NUMBERS!");
-            tempDesc.k = atoi(results[0].c_str());
-            tempDesc.n = atoi(results[1].c_str());
+            tempDesc.n = atoi(results[0].c_str());
+            tempDesc.k = atoi(results[1].c_str());
             first_red = true;
             continue;
         }
 
-        assertm(results.size() == tempDesc.n + 1 , "DescLine error!");
+        assertm(results.size() == tempDesc.k + 1 , "DescLine error!");
         DescriptionLine tempDescLine;
 
         for (auto i = 0; i<results.size()-1; i++) {
@@ -92,6 +88,9 @@ void writeOutput(std::vector<double> results) {
 
 
 int main(int argc, const char * argv[]) {
+
+    std::cout.precision(dbl::max_digits10);
+
     assertm(argc == 3, "Unexpected args! error!");
     std::string descriptionFileName;
 
@@ -105,8 +104,10 @@ int main(int argc, const char * argv[]) {
     auto result = std::vector<double>();
 
     auto out = std::vector<double>();
+    
 
     for(int i = 0; i < input.inputLines.size();i++){
+        assertm(input.inputLines[i].wsp.size() == description.n , "DescLine n error!");
 
         result.push_back(0.0);
         result[i] = 0.0;
