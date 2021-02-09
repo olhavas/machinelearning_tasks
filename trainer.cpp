@@ -22,7 +22,7 @@ struct TrainSet {
 };
 
 struct LearningData {
-    const double learninRate = 0.01;
+    const double learninRate = 0.02;
     int iter = 900;
     const int k = 1;
     std::vector<double> cost= std::vector<double>(iter, 0.0);
@@ -52,8 +52,8 @@ TrainSet readTrainSet(std::string fileName, int dimentions) {
         std::vector<std::string> results(std::istream_iterator<std::string>{stream},
                                          std::istream_iterator<std::string>());
         Coordinate tempCoord;
-        assertm(results.size() == dimentions+1, "TRAIN SET LINE HAS CONTENT N+1 NUMBERS!");
-        for ( auto s = 0; s < results.size()-1; s++ ) {
+        //assertm(results.size() == dimentions+1, "TRAIN SET LINE HAS CONTENT N+1 NUMBERS!");
+        for ( auto s = 0; (s < results.size()-1) && s < dimentions; s++ ) {
             tempCoord.x.push_back(atof(results[s].c_str()));
         }
         tempCoord.y = atof(results[results.size()-1].c_str());
@@ -75,6 +75,7 @@ void writeToFile(std::string filename, std::string text){
 Description readDescription() {
     Description tempDesc;
     bool first_red = false;
+    int dim =0;
 
     for ( std::string line; getline(std::cin, line); ) {
         std::istringstream stream(line);
@@ -90,16 +91,17 @@ Description readDescription() {
             continue;
         }
 
-        assertm(results.size() == tempDesc.k + 1 , "DescLine error!");
+        //assertm(results.size() == tempDesc.k + 1 , "DescLine error!");
         DescriptionLine tempDescLine;
 
-        for ( auto i = 0; i < results.size() - 1; i++ ) {
+        for ( auto i = 0; (i < results.size() - 1) && i <tempDesc.k; i++ ) {
             tempDescLine.wspolrzedne.push_back(atoi(results[i].c_str()));
         }
         tempDescLine.wspolczynnik = atof(results[results.size() - 1].c_str());
-        tempDesc.descriptionLines.push_back(tempDescLine);
+        if(dim< tempDesc.n+1)tempDesc.descriptionLines.push_back(tempDescLine);
+        dim++;
     }
-    assertm(tempDesc.descriptionLines.size()== tempDesc.n + 1 , "DescLine error!");
+    //assertm(tempDesc.descriptionLines.size()== tempDesc.n + 1 , "DescLine error!");
     return tempDesc;
 }
 
@@ -197,22 +199,11 @@ int main(int argc, const char *argv[]) {
     auto parameters =trainee::readDescription(descriptionFileName);
     auto trainSet = readTrainSet(trainsetFileName, parameters.n);
 
-/*
-    for ( auto t: trainSet.coordinates ) {
-        std::cout << std::setprecision(16) << t.x << ' ' << t.y << '\n';
-    }
-    std::cout << input.iter << '\n' << '\n';
-    std::cout << parameters.k << ' ' << parameters.n << '\n';
-    for ( auto d: parameters.descriptionLines ) {
-        for ( auto de: d.wspolrzedne )
-            std::cout << de << ' ';
-        std::cout << static_cast<double>(d.wspolczynnik) << '\n';
-    }
-*/
+
 
     LearningData learningData;
     {
-        bool decision = true;
+        bool decision = false;
         if (decision){
             learningData.iter = trainer::readInput(inputFileName);
             learningData.cost.resize(learningData.iter, 0.0);
@@ -220,10 +211,6 @@ int main(int argc, const char *argv[]) {
     }
     trainer::linRegression(trainSet,learningData,parameters);
     writeToFile(outputFileName, "iterations="+std::to_string(learningData.iter));
-
-
-
-
 
     return 0;
 
