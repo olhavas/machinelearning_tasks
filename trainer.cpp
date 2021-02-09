@@ -10,8 +10,10 @@
 
 using namespace std::regex_constants;
 
+typedef std::numeric_limits< double > dbl;
+
 struct Coordinate {
-    double x;
+    std::vector<double> x;
     double y;
 };
 
@@ -21,31 +23,28 @@ struct TrainSet {
 
 struct LearningData {
     const double learninRate = 0.01;
-    int iter = 1000;
+    int iter = 900;
     const int k = 1;
     std::vector<double> cost= std::vector<double>(iter, 0.0);
 
 };
 
 namespace trainer {
-    struct Input {
-        int iter;
-    };
 
-    Input readInput(std::string fileName) {
-        Input in;
+    int readInput(std::string fileName) {
+        int in;
         std::ifstream input(fileName);
         std::string line;
         getline(input, line);
         std::smatch m;
         std::regex_search(line, m, std::regex("[[:digit:]]+"));
 
-        in.iter = std::stoi(m.str());
+        in = std::stoi(m.str());
         return in;
     }
 }
 
-TrainSet readTrainSet(std::string fileName) {
+TrainSet readTrainSet(std::string fileName, int dimentions) {
     TrainSet tempTrainSet;
     std::ifstream input(fileName);
     for ( std::string line; getline(input, line); ) {
@@ -53,12 +52,11 @@ TrainSet readTrainSet(std::string fileName) {
         std::vector<std::string> results(std::istream_iterator<std::string>{stream},
                                          std::istream_iterator<std::string>());
         Coordinate tempCoord;
-        assertm(results.size() == 2, "TRAIN SET LINE HAS TO BE 2 NUMBERS!");
-        for ( auto s = 0; s < results.size(); s += 2 ) {
-
-            tempCoord.x = atof(results[0].c_str());
-            tempCoord.y = atof(results[1].c_str());
+        assertm(results.size() == dimentions+1, "TRAIN SET LINE HAS CONTENT N+1 NUMBERS!");
+        for ( auto s = 0; s < results.size()-1; s++ ) {
+            tempCoord.x.push_back(atof(results[s].c_str()));
         }
+        tempCoord.y = atof(results[results.size()-1].c_str());
         tempTrainSet.coordinates.push_back(tempCoord);
     }
     return tempTrainSet;
@@ -83,15 +81,16 @@ Description readDescription() {
         std::vector<std::string> results(std::istream_iterator<std::string>{stream},
                                          std::istream_iterator<std::string>());
 
-        if (!first_red) {
+        if(!first_red) {
             assertm(results.size() == 2, "FIRST DESC LINE HAS TO BE 2 NUMBERS!");
-            tempDesc.k = atoi(results[0].c_str());
-            tempDesc.n = atoi(results[1].c_str());
+            tempDesc.n = atoi(results[0].c_str());
+            tempDesc.k = atoi(results[1].c_str());
+            if(tempDesc.k != 1) tempDesc.k = 1;
             first_red = true;
             continue;
         }
 
-        assertm(results.size() == tempDesc.n + 1, "DescLine error!");
+        assertm(results.size() == tempDesc.k + 1 , "DescLine error!");
         DescriptionLine tempDescLine;
 
         for ( auto i = 0; i < results.size() - 1; i++ ) {
@@ -100,15 +99,15 @@ Description readDescription() {
         tempDescLine.wspolczynnik = atof(results[results.size() - 1].c_str());
         tempDesc.descriptionLines.push_back(tempDescLine);
     }
+    assertm(tempDesc.descriptionLines.size()== tempDesc.n + 1 , "DescLine error!");
     return tempDesc;
 }
 
 namespace trainer {
     std::vector<double> hypothesis(const std::vector<double> &theta, const std::vector<std::vector<double>> &coorX) {
-        assertm(theta.size()==coorX[0].size(), "[HYPOTHESIS]SIZE OF AFFAYS IS DIFFERENT!");
+        assertm(theta.size()==coorX[0].size(), "[HYPOTHESIS]SOME MODIFICATION DONE: SIZE OF AFFAYS IS DIFFERENT!");
         std::vector<double> hypo(coorX.size(), 0.0);
         for ( int i = 0; i < coorX.size(); i++ ) {
-            //hypo[i] = 0.0;
             for ( auto j = 0; j < coorX[0].size();j++ ) {
                 hypo[i] += theta[j]*coorX[i][j];
             }
@@ -124,7 +123,7 @@ namespace trainer {
 
             for (int j = 1; j < n+1; j++){
                 theta[j] = theta[j] - (ld.learninRate/coorX.size())*
-                        sum(multiply(substract<double>(hypo, coorY),transpose(coorX)[j]));
+                                      sum(multiply(substract<double>(hypo, coorY),transpose(coorX)[j]));
 
             }
             hypo = hypothesis(theta,coorX);
@@ -135,24 +134,25 @@ namespace trainer {
     }
     void linRegression(const TrainSet &t, LearningData &ld,const Description &param){
         std::vector<double> y;
-        std::vector<std::vector<double>>x;
+        std::vector<std::vector<double>>X;
         std::vector<double> theta;
         for(short i= 0; i< t.coordinates.size();i++){
             std::vector<double> temp;
             temp.push_back(1.0);
-            temp.push_back(t.coordinates[i].x);
-            x.push_back(temp);
+            for(auto j: t.coordinates[i].x){
+                temp.push_back(j);
+            }
+            X.push_back(temp);
             y.push_back(t.coordinates[i].y);
         }
         for (auto p : param.descriptionLines){
             theta.push_back(p.wspolczynnik);
         }
-        auto hypo = hypothesis(theta,x);
-        gradientDescent(theta,ld,hypo,x,y,param.n);
-        //std::cout<<theta.size()<<" "<<param.descriptionLines.size();
-        std::cout<<param.k<<' '<<param.n<<'\n';
+        auto hypo = hypothesis(theta,X);
+        gradientDescent(theta,ld,hypo,X,y,param.n);
+        std::cout<<param.n<<' '<<param.k<<'\n';
         for(int i = 0; i < theta.size(); i++){
-            std::cout << std::setprecision(17)<<param.descriptionLines[i].wspolrzedne[0]<<' '<<theta[theta.size()-1-i]<<"\n";
+            std::cout <<theta.size()-1-i<<' '<<theta[theta.size()-1-i]<<"\n";
         }
     }
 }
@@ -162,8 +162,8 @@ namespace trainer {
 
 
 int main(int argc, const char *argv[]) {
-    //linux
-    //assertm(argc == 7, "Unexpected args! error!");
+
+    std::cout.precision(dbl::max_digits10);
 
     std::string trainsetFileName;
     std::string inputFileName;
@@ -181,19 +181,22 @@ int main(int argc, const char *argv[]) {
             outputFileName = std::string(argv[i + 1]);
             continue;
         }
-            //windows
-//        else if (arg.compare("-d") == 0) {
-//            descriptionFileName = std::string(argv[i + 1]);
-//            continue;
-//        }
+//wind
+        else if (arg.compare("-d") == 0) {
+            descriptionFileName = std::string(argv[i + 1]);
+            continue;
+        }
+
     }
 
-    auto trainSet = readTrainSet(trainsetFileName);
-    auto input = trainer::readInput(inputFileName);
-//    //windows
-//    auto parameters = trainee::readDescription(descriptionFileName);
+
+
+
 //    linux
-    auto parameters = readDescription();
+//    auto parameters = readDescription();
+    auto parameters =trainee::readDescription(descriptionFileName);
+    auto trainSet = readTrainSet(trainsetFileName, parameters.n);
+
 /*
     for ( auto t: trainSet.coordinates ) {
         std::cout << std::setprecision(16) << t.x << ' ' << t.y << '\n';
@@ -208,6 +211,13 @@ int main(int argc, const char *argv[]) {
 */
 
     LearningData learningData;
+    {
+        bool decision = true;
+        if (decision){
+            learningData.iter = trainer::readInput(inputFileName);
+            learningData.cost.resize(learningData.iter, 0.0);
+        }
+    }
     trainer::linRegression(trainSet,learningData,parameters);
     writeToFile(outputFileName, "iterations="+std::to_string(learningData.iter));
 
